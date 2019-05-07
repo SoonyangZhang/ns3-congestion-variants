@@ -28,4 +28,12 @@ The mian logic to configure congestion control algorithm to a socket is the foll
 	TcpSocketBase *base=static_cast<TcpSocketBase*>(PeekPointer(m_socket));	
 	base->SetCongestionControlAlgorithm (algo);
 ```
+And add three lines in socket.h(src/network/model/)  
+```
+public:
+  void SetHandler(void*handler){m_handler=handler;}//++
+  void *GetHandler(){return m_handler;}//++
+private:
+void *m_handler;//++
+```
 

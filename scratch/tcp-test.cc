@@ -1,6 +1,6 @@
 #include <string>
 #include<stdio.h>
-#include<unistd.h>
+#include <iostream>
 #include "ns3/core-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/network-module.h"
@@ -72,10 +72,9 @@ int main(int argc, char *argv[])
         //dev0.Get (1)->TraceConnectWithoutContext("PhyRxDrop", MakeCallback (&RxDrop));        
     }
 
-
+    
     uint16_t servPort = 5000;
     uint32_t client_id=1;
-    // Create a packet sink to receive these packets on n2...
     PacketSinkHelper sink ("ns3::TcpSocketFactory",
                         InetSocketAddress (Ipv4Address::GetAny (), servPort));
     
@@ -91,7 +90,7 @@ int main(int argc, char *argv[])
     n0n1.Get(0)->AddApplication(client1);
     client1->SetMaxBytes(totalTxBytes);
     client1->ConfigurePeer(servIp,servPort);
-    client1->EnableTrace(TcpClient::E_TCP_CWND|TcpClient::E_TCP_RTT);
+    client1->EnableTrace(TcpClient::E_TCP_CWND|TcpClient::E_TCP_RTT|TcpClient::E_TCP_BW);
     client1->SetStartTime (Seconds (startTime));
     client1->SetStopTime (Seconds (simDuration));
     

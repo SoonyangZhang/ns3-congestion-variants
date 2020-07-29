@@ -61,7 +61,11 @@ void TcpClient::StartApplication (void){
     if(m_log|E_TCP_RTT){
         m_trace.OpenRttTraceFile(log_name+std::to_string(m_cid));
         m_socket->TraceConnectWithoutContext ("RTT",MakeCallback(&TcpTracer::OnRtt,&m_trace));
-    }  
+    }
+    if(m_log|E_TCP_BW){
+        //m_trace.OpenBandwidthTraceFile(log_name+std::to_string(m_cid));
+        //m_socket->TraceConnectWithoutContext ("Bandwidth",MakeCallback(&TcpTracer::OnBandwidth,&m_trace));        
+    }
     m_socket->Connect (InetSocketAddress (m_servAddr, m_servPort));
     m_socket->ShutdownRecv ();
     m_socket->SetConnectCallback (

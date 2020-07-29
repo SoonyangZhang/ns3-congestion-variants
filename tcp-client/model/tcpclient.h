@@ -12,7 +12,8 @@ public:
     enum TcpClientTraceEnable:uint8_t{
         E_TCP_CWND=0x01,
         E_TCP_RTT=0x02,
-        E_POSSION_ALL=E_TCP_CWND|E_TCP_RTT,
+        E_TCP_BW=0x04,
+        E_POSSION_ALL=E_TCP_CWND|E_TCP_RTT|E_TCP_BW,
     };
     TcpClient(uint32_t client_id);
     void SetCongestionAlgo(std::string algo);
@@ -21,7 +22,6 @@ public:
     void EnableTrace(uint8_t log){
         m_log=log;
     }
-    Ptr<Socket> GetSocket() const {return m_socket;}
 private:
     virtual void StartApplication (void);
     virtual void StopApplication (void);

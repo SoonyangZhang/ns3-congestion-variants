@@ -1,42 +1,46 @@
-#ifndef TCP_CLIENT_H
-#define TCP_CLIENT_H
+#pragma once
 #include<string>
-#include"ns3/core-module.h"
-#include"ns3/internet-module.h"
-#include"ns3/network-module.h"
+#include "ns3/address.h"
+#include "ns3/application.h"
+#include "ns3/internet-module.h"
+#include "ns3/tcptracer.h"
 namespace ns3
 {
-
-class TcpClient
+class TcpClient:public Application
 {
 public:
-	TcpClient(uint32_t clientid);
-	void CreateSocket(Ptr<Node> node);
-	void SetCongestionAlgo(std::string algo);
-	void StartFlow(Ipv4Address servAddress,uint16_t servPort)
-	{
-		m_servAddr=servAddress;
-		m_servPort=servPort;
-		m_socket->Connect(InetSocketAddress (servAddress, servPort));
-	}
-	void SetWriteData(uint8_t *data,uint32_t len,uint64_t total){
-		m_data=data;
-		m_writeSize=len;
-		m_total=total;
-		}
-	void StopTime(uint64_t duration){m_duration=duration;}//in seconds
-	Ptr<Socket> GetSocket(){return m_socket;}
-public:
-uint64_t m_total;
-uint64_t m_currentTxBytes;
-Ipv4Address m_servAddr;
-uint16_t m_servPort;
-Ptr<Socket> m_socket;
-uint8_t *m_data;
-uint32_t m_writeSize;
-uint64_t m_duration;
-uint32_t m_cid;
+    enum TcpClientTraceEnable:uint8_t{
+        E_TCP_CWND=0x01,
+        E_TCP_RTT=0x02,
+        E_POSSION_ALL=E_TCP_CWND|E_TCP_RTT,
+    };
+    TcpClient(uint32_t client_id);
+    void SetCongestionAlgo(std::string algo);
+    void SetMaxBytes (uint64_t maxBytes);
+    void ConfigurePeer(Ipv4Address addr,uint16_t port);
+    void EnableTrace(uint8_t log){
+        m_log=log;
+    }
+    Ptr<Socket> GetSocket() const {return m_socket;}
+private:
+    virtual void StartApplication (void);
+    virtual void StopApplication (void);
+    void ConfigureCongstionAlgo();
+    void ConnectionSucceeded (Ptr<Socket> socket);
+    void ConnectionFailed (Ptr<Socket> socket);
+    void DataSend (Ptr<Socket>, uint32_t); // for socket's SetSendCallback
+    void SendData();
+    uint32_t m_cid;
+    uint64_t m_maxBytes;
+    uint64_t m_currentTxBytes;
+    uint32_t m_sendSize;
+    bool m_connected{false};
+    std::string m_algo{"TcpNewReno"};
+    Ipv4Address m_servAddr;
+    uint16_t m_servPort;
+    Ptr<Socket> m_socket;
+    uint8_t m_log{0};
+    TcpTracer m_trace;
 };	
 }
 
-#endif

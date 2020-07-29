@@ -4,9 +4,11 @@ def build(bld):
     tcpclient = bld.create_ns3_module('tcp-client', ['core','network','internet'])
     tcpclient.source = [
         'model/tcpclient.cc',
+        'model/tcptracer.cc',
         ]
     headers = bld(features='ns3header')
     headers.module = 'tcp-client'
     headers.source = [
         'model/tcpclient.h',
+        'model/tcptracer.h',
         ]

@@ -8,14 +8,12 @@ namespace ns3{
 class TcpTracer
 {
 public:
-	TcpTracer(){}
+    TcpTracer(){}
     ~TcpTracer();
+    static void SetTraceFolder(const char *path);
     void OpenCwndTraceFile(std::string filename);
-    void CloseTcpWindowTraceFile();
     void OpenRttTraceFile(std::string filename);
-    void CloseRttTraceFile();
     void OpenBandwidthTraceFile(std::string filename);
-    void CloseBandwidhtTraceFile();
     void OnCwnd(uint32_t oldval, uint32_t newval);
     void OnRtt(Time oldval, Time newval);
     void OnBandwidth(uint32_t seq,uint32_t size,uint64_t bps);

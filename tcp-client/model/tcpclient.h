@@ -13,34 +13,28 @@ public:
         E_TCP_CWND=0x01,
         E_TCP_RTT=0x02,
         E_TCP_BW=0x04,
-        E_POSSION_ALL=E_TCP_CWND|E_TCP_RTT|E_TCP_BW,
+        E_TCP_ALL=E_TCP_CWND|E_TCP_RTT|E_TCP_BW,
     };
-    TcpClient(uint32_t client_id);
-    void SetCongestionAlgo(std::string algo);
-    void SetMaxBytes (uint64_t maxBytes);
-    void ConfigurePeer(Ipv4Address addr,uint16_t port);
-    void EnableTrace(uint8_t log){
-        m_log=log;
-    }
+    TcpClient(uint64_t bytes,uint8_t log=0);
+    void ConfigurePeer(Address &addr);
+    void SetCongestionAlgo(std::string &algo);
 private:
     virtual void StartApplication (void);
     virtual void StopApplication (void);
     void ConfigureCongstionAlgo();
     void ConnectionSucceeded (Ptr<Socket> socket);
     void ConnectionFailed (Ptr<Socket> socket);
-    void DataSend (Ptr<Socket>, uint32_t); // for socket's SetSendCallback
-    void SendData();
-    uint32_t m_cid;
-    uint64_t m_maxBytes;
-    uint64_t m_currentTxBytes;
-    uint32_t m_sendSize;
-    bool m_connected{false};
+    void OnCanWrite(Ptr<Socket>, uint32_t); // for socket's SetSendCallback
+    void NotifiSendData();
+    uint32_t m_uuid=0;
+    uint64_t m_targetBytes=0;
+    uint64_t m_currentTxBytes=0;
+    uint8_t m_log=0;
+    bool m_connected=false;
     std::string m_algo{"TcpNewReno"};
-    Ipv4Address m_servAddr;
-    uint16_t m_servPort;
+    Address m_serverAddr_;
     Ptr<Socket> m_socket;
-    uint8_t m_log{0};
     TcpTracer m_trace;
-};	
+};
 }
 

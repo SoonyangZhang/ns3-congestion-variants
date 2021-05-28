@@ -11,90 +11,91 @@
 using namespace ns3;
 using namespace std;
 
-NS_LOG_COMPONENT_DEFINE ("TCPMain");
-// The number of bytes to send in this simulation.
-static const uint32_t totalTxBytes = 20000*1500;
+NS_LOG_COMPONENT_DEFINE ("tcp-test");
 static const double startTime=0;
-static const double simDuration    = 100.0;
-int main(int argc, char *argv[])
+static const double simDuration= 100.0;
+#define DEFAULT_PACKET_SIZE 1500
+static NodeContainer BuildExampleTopo (uint64_t bps,
+                                       uint32_t msDelay,
+                                       uint32_t msQdelay,
+                                       bool enable_random_loss=false)
 {
-	LogComponentEnable("TCPMain", LOG_LEVEL_ALL);	
-    LogComponentEnable("TCPClient", LOG_LEVEL_ALL);
-	CommandLine cmd;
-	cmd.Parse (argc, argv);
-	// Set a few attributes
-	Config::SetDefault ("ns3::RateErrorModel::ErrorRate", DoubleValue (0.01));
-	Config::SetDefault ("ns3::RateErrorModel::ErrorUnit", StringValue ("ERROR_UNIT_PACKET"));
+    NodeContainer nodes;
+    nodes.Create (2);
 
-	Config::SetDefault ("ns3::BurstErrorModel::ErrorRate", DoubleValue (0.05));
-	Config::SetDefault ("ns3::BurstErrorModel::BurstSize", StringValue ("ns3::UniformRandomVariable[Min=1|Max=3]"));
-	std::string errorModelType = "ns3::RateErrorModel";	
-	NodeContainer n0n1;
-	n0n1.Create (2);
-
-	//NodeContainer n1n2;
-	//n1n2.Add (n0n1.Get (1));
-	//n1n2.Create (1);
-	InternetStackHelper stack;
-	stack.Install (n0n1);
-
-	
-    uint32_t bps=2000000;
-    uint32_t msDelay=50;
-    uint32_t msQdelay=100;
-    uint32_t mtu=1500;
     PointToPointHelper pointToPoint;
     pointToPoint.SetDeviceAttribute ("DataRate", DataRateValue  (DataRate (bps)));
     pointToPoint.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (msDelay)));
-    auto bufSize = std::max<uint32_t> (mtu, bps * msQdelay / 8000);
-    int packets=bufSize/mtu;
-	pointToPoint.SetQueue ("ns3::DropTailQueue",
-                  "MaxSize", StringValue (std::to_string(1)+"p"));
-    NetDeviceContainer dev0 = pointToPoint.Install (n0n1);
-    
+    auto bufSize = std::max<uint32_t> (DEFAULT_PACKET_SIZE, bps * msQdelay / 8000);
+    int packets=bufSize/DEFAULT_PACKET_SIZE;
+    pointToPoint.SetQueue ("ns3::DropTailQueue",
+                           "MaxSize", StringValue (std::to_string(1)+"p"));
+    NetDeviceContainer devices = pointToPoint.Install (nodes);
+
+    InternetStackHelper stack;
+    stack.Install (nodes);
+
     TrafficControlHelper pfifoHelper;
     uint16_t handle = pfifoHelper.SetRootQueueDisc ("ns3::FifoQueueDisc", "MaxSize", StringValue (std::to_string(packets)+"p"));
     pfifoHelper.AddInternalQueues (handle, 1, "ns3::DropTailQueue", "MaxSize",StringValue (std::to_string(packets)+"p"));
-    pfifoHelper.Install(dev0);
-    
-    
-	Ipv4AddressHelper ipv4Helper;
-	ipv4Helper.SetBase ("10.1.1.0", "255.255.255.0");
-	ipv4Helper.Assign (dev0);
-	Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
-    
-    bool error=false;
-    if(error){
+    pfifoHelper.Install(devices);
+    Ipv4AddressHelper address;
+    std::string nodeip="10.1.1.0";
+    address.SetBase (nodeip.c_str(), "255.255.255.0");
+    address.Assign (devices);
+    if(enable_random_loss){
+        std::string errorModelType = "ns3::RateErrorModel";
         ObjectFactory factory;
         factory.SetTypeId (errorModelType);
         Ptr<ErrorModel> em = factory.Create<ErrorModel> ();
-        dev0.Get (1)->SetAttribute ("ReceiveErrorModel", PointerValue (em));
-        //dev0.Get (1)->TraceConnectWithoutContext("PhyRxDrop", MakeCallback (&RxDrop));        
+        devices.Get (1)->SetAttribute ("ReceiveErrorModel", PointerValue (em));
     }
+    return nodes;
+}
+int main(int argc, char *argv[])
+{
+    LogComponentEnable("tcp-test", LOG_LEVEL_ALL);	
+    LogComponentEnable("tcp-client", LOG_LEVEL_ALL);
+    CommandLine cmd;
+    cmd.Parse (argc, argv);
+    uint32_t link_bw=3000000;
+    uint32_t link_owd=100;
+    uint32_t q_delay=300;
+    NodeContainer topo;
+    topo=BuildExampleTopo(link_bw,link_owd,q_delay);
+    Ptr<Node> h1=topo.Get(0);
+    Ptr<Node> h2=topo.Get(1);
 
-    
-    uint16_t servPort = 5000;
-    uint32_t client_id=1;
+    uint16_t serv_port = 5000;
     PacketSinkHelper sink ("ns3::TcpSocketFactory",
-                        InetSocketAddress (Ipv4Address::GetAny (), servPort));
+                        InetSocketAddress (Ipv4Address::GetAny (), serv_port));
     
-    Ptr<Node> serverNode=n0n1.Get (1);
-    Ptr<Ipv4> ipv4 = serverNode->GetObject<Ipv4> ();
-	Ipv4Address servIp = ipv4->GetAddress (1, 0).GetLocal();
-    ApplicationContainer apps = sink.Install (serverNode);
+
+    ApplicationContainer apps = sink.Install (h2);
     apps.Start (Seconds (0.0));
     apps.Stop (Seconds (simDuration));
     
+    Ptr<Ipv4> ipv4 = h2->GetObject<Ipv4> ();
+    Ipv4Address serv_ip = ipv4->GetAddress (1, 0).GetLocal();
+    InetSocketAddress socket_addr=InetSocketAddress{serv_ip,serv_port};
+    Address serv_addr=socket_addr;
+
     
-    Ptr<TcpClient>  client1= CreateObject<TcpClient> (client_id);
-    n0n1.Get(0)->AddApplication(client1);
-    client1->SetMaxBytes(totalTxBytes);
-    client1->ConfigurePeer(servIp,servPort);
-    client1->EnableTrace(TcpClient::E_TCP_CWND|TcpClient::E_TCP_RTT|TcpClient::E_TCP_BW);
-    client1->SetStartTime (Seconds (startTime));
-    client1->SetStopTime (Seconds (simDuration));
-    
-    client_id++;
+    uint64_t totalTxBytes = 20000*1500;
+    {
+        Ptr<TcpClient>  client= CreateObject<TcpClient> (totalTxBytes,TcpClient::E_TCP_RTT);
+        h1->AddApplication(client);
+        client->ConfigurePeer(serv_addr);
+        client->SetStartTime (Seconds (startTime));
+        client->SetStopTime (Seconds (simDuration));
+    }
+    {
+        Ptr<TcpClient>  client= CreateObject<TcpClient> (totalTxBytes,TcpClient::E_TCP_RTT);
+        h1->AddApplication(client);
+        client->ConfigurePeer(serv_addr);
+        client->SetStartTime (Seconds (startTime));
+        client->SetStopTime (Seconds (simDuration));
+    }
     
     Simulator::Stop (Seconds (simDuration+10.0));
     Simulator::Run ();

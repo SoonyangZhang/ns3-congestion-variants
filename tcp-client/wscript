@@ -3,15 +3,12 @@
 def build(bld):
     tcpclient = bld.create_ns3_module('tcp-client', ['core','network','internet'])
     tcpclient.source = [
-        'model/quic_rtt_stats.cc',
         'model/tcpclient.cc',
         'model/tcptracer.cc',
         ]
     headers = bld(features='ns3header')
     headers.module = 'tcp-client'
     headers.source = [
-        'model/quic_rtt_stats.h',
         'model/tcpclient.h',
         'model/tcptracer.h',
         ]
-    tcpclient.env.append_value('DEFINES', '__STDC_FORMAT_MACROS')
